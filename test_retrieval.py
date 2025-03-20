@@ -3,6 +3,7 @@ from app import app  # Import the Flask app from your main file
 from datetime import datetime
 import pytz
 from dateutil import parser
+import re
 
 
 @pytest.fixture
@@ -11,23 +12,38 @@ def client():
     with app.test_client() as client:
         yield client
 
-# Test: Get stock news for a specific symbol
+# Test: Get company news for a specific company
 
 
-def test_get_stock_news(client):
-    response = client.get("/stocks/AAPL")
+def test_get_company_news(client):
+    response = client.get("/company/Apple")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
-    assert len(data) > 0  # AAPL exists in MongoDB test data
-    assert data[0]["attribute"]["tickers"] == "AAPL"
+    assert len(data) > 0  # Apple exists in MongoDB test data
+    title = data[0]["attribute"]["title"]
+    description = data[0]["attribute"]["description"]
+    assert re.search("Apple", title, re.I) or re.search("Apple", description, re.I)
 
-# Test: Get stock news for a symbol with a date range
+# Test: Get company news for a specific company (case insensitivity test)
 
 
-def test_get_stock_news_range(client):
+def test_get_company_news_case_insensitive(client):
+    response = client.get("/company/oPTuS")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    assert len(data) > 0  # Optus exists in MongoDB test data
+    title = data[0]["attribute"]["title"]
+    description = data[0]["attribute"]["description"]
+    assert re.search("Optus", title, re.I) or re.search("Optus", description, re.I)
+
+# Test: Get company news for a company with a date range (+ case insensitivity)
+
+
+def test_get_company_news_range(client):
     response = client.get(
-        "/stocks/AAPL/range?start_date=2025-03-07&end_date=2025-03-09")
+        "/company/aPPLe/range?start_date=2025-03-07&end_date=2025-03-09")
     assert response.status_code == 200
     data = response.get_json()
 
@@ -45,21 +61,21 @@ def test_get_stock_news_range(client):
         assert datetime(2025, 3, 7, tzinfo=pytz.utc).date(
         ) <= published_date.date() <= datetime(2025, 3, 9, tzinfo=pytz.utc).date()
 
-# Test: Get stock news with no results (wrong symbol)
+# Test: Get company news with no results (company name does not exist)
 
 
-def test_get_stock_news_not_found(client):
-    response = client.get("/stocks/FAKE")
+def test_get_company_news_not_found(client):
+    response = client.get("/company/ThisCompanyDoesNotExist")
     assert response.status_code == 404
     data = response.get_json()
-    assert data["message"] == "No news found for FAKE"
+    assert data["message"] == "No news found for ThisCompanyDoesNotExist"
 
-# Test: Get stock news with no results in a given date range
+# Test: Get company news with no results in a given date range
 
 
-def test_get_stock_news_range_not_found(client):
+def test_get_company_news_range_not_found(client):
     response = client.get(
-        "/stocks/AAPL/range?start_date=2020-01-01&end_date=2020-01-02")
+        "/company/Apple/range?start_date=2020-01-01&end_date=2020-01-02")
     assert response.status_code == 404
     data = response.get_json()
-    assert data["message"] == "No news found for AAPL in the given date range"
+    assert data["message"] == "No news found for Apple in the given date range"
