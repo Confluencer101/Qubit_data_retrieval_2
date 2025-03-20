@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock News Lookup</title>
+    <title>Company News Lookup</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
         body { padding: 20px; }
@@ -17,11 +17,11 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center mb-4">Stock News Lookup</h1>
-        <form method="post" id="stockForm">
+        <h1 class="text-center mb-4">Company News Lookup</h1>
+        <form method="post" id="companyForm">
             <div class="mb-3">
-                <label for="symbol" class="form-label">Stock Symbol:</label>
-                <input type="text" id="symbol" name="symbol" class="form-control" placeholder="e.g., AAPL" required>
+                <label for="name" class="form-label">Company Name:</label>
+                <input type="text" id="name" name="name" class="form-control" placeholder="e.g., Apple" required>
             </div>
             <div class="mb-3">
                 <label for="start_date" class="form-label">Start Date:</label>
@@ -59,7 +59,7 @@
         {% endif %}
     </div>
     <script>
-        document.getElementById("stockForm").addEventListener("submit", function() {
+        document.getElementById("companyForm").addEventListener("submit", function() {
             document.getElementById("loading").classList.remove("hidden");
         });
     </script>
