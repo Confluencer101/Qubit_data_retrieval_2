@@ -23,7 +23,8 @@ def test_get_company_news(client):
     assert len(data) > 0  # Apple exists in MongoDB test data
     title = data[0]["attribute"]["title"]
     description = data[0]["attribute"]["description"]
-    assert re.search("Apple", title, re.I) or re.search("Apple", description, re.I)
+    assert re.search("Apple", title, re.I) or re.search(
+        "Apple", description, re.I)
 
 # Test: Get company news for a specific company (case insensitivity test)
 
@@ -36,7 +37,8 @@ def test_get_company_news_case_insensitive(client):
     assert len(data) > 0  # Optus exists in MongoDB test data
     title = data[0]["attribute"]["title"]
     description = data[0]["attribute"]["description"]
-    assert re.search("Optus", title, re.I) or re.search("Optus", description, re.I)
+    assert re.search("Optus", title, re.I) or re.search(
+        "Optus", description, re.I)
 
 # Test: Get company news for a company with a date range (+ case insensitivity)
 

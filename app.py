@@ -60,7 +60,8 @@ def index():
 def get_company_news(name):
     query = {"$or": []}
     query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
-    query["$or"].append({"attribute.description": {"$regex": name, "$options": "i"}})
+    query["$or"].append(
+        {"attribute.description": {"$regex": name, "$options": "i"}})
 
     limit = request.args.get("limit", default=10, type=int)
 
@@ -80,7 +81,8 @@ def get_company_news(name):
 def get_company_news_range(name):
     query = {"$or": []}
     query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
-    query["$or"].append({"attribute.description": {"$regex": name, "$options": "i"}})
+    query["$or"].append(
+        {"attribute.description": {"$regex": name, "$options": "i"}})
 
     limit = request.args.get("limit", default=10, type=int)
 
