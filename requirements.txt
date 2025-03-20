@@ -11,6 +11,7 @@ dotenv==0.9.9
 flake8==7.1.2
 Flask==3.1.0
 idna==3.10
+iniconfig==2.1.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.2
@@ -19,13 +20,18 @@ mypy==1.15.0
 mypy-extensions==1.0.0
 packaging==24.2
 pip-review==1.3.0
+pluggy==1.5.0
 pycodestyle==2.12.1
 pycparser==2.22
 pyflakes==3.2.0
 pymongo==4.11.3
+pytest==8.3.5
+python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
+pytz==2025.1
 requests==2.32.3
 setuptools==76.1.0
+six==1.17.0
 types-cffi==1.17.0.20250319
 types-click==7.1.8
 types-Flask==1.1.6
