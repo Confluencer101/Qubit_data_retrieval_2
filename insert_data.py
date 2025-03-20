@@ -10,7 +10,7 @@ load_dotenv()  # Load .env variables
 mongo_uri = os.getenv("PAUL_MONGO_URI")  # Ensure this is correct
 
 try:
-    client = MongoClient(mongo_uri)  # 5 sec timeout
+    client: MongoClient = MongoClient(mongo_uri)  # 5 sec timeout
     db = client["qubit_database"]  # Replace with your actual DB name
     collection = db["stocks"]
 
@@ -22,7 +22,7 @@ except Exception as e:
 
 # Sample data
 sample_data = [
-      {
+    {
         "time_object": {
             "timestamp": pytz.utc.localize(datetime.datetime.strptime("2025-03-10", "%Y-%m-%d")),
             "duration": None,
@@ -58,7 +58,8 @@ sample_data = [
     },
     {
         "time_object": {
-            "timestamp": pytz.utc.localize(datetime.datetime.strptime("2025-03-08", "%Y-%m-%d")),  # Fixed duplicate key
+            # Fixed duplicate key
+            "timestamp": pytz.utc.localize(datetime.datetime.strptime("2025-03-08", "%Y-%m-%d")),
             "duration": None,
             "duration_unit": None,
             "timezone": "UTC"

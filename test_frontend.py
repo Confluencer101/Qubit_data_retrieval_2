@@ -1,8 +1,10 @@
 import pytest
-from flask import Flask
+# from flask import Flask
 from app import app  # Import the Flask app from your main application file
 
 # Flask-Testing client fixture
+
+
 @pytest.fixture
 def client():
     app.config["TESTING"] = True
@@ -10,15 +12,22 @@ def client():
         yield client
 
 # Test: GET request to index route
+
+
 def test_get_index(client):
     response = client.get('/')
     assert response.status_code == 200
-    assert b"Stock Symbol" in response.data  # Check if the form has a Stock Symbol field
-    assert b"Start Date" in response.data  # Check if the form has a Start Date field
+    # Check if the form has a Company Name field
+    assert b"Company Name" in response.data
+    # Check if the form has a Start Date field
+    assert b"Start Date" in response.data
     assert b"End Date" in response.data  # Check if the form has an End Date field
     assert b"Get News" in response.data  # Check if the submit button exists
 
+
 # Test: POST request with missing stock symbol
+
+
 def test_post_missing_symbol(client):
     response = client.post('/', data={
         'symbol': '',
@@ -26,15 +35,19 @@ def test_post_missing_symbol(client):
         'end_date': ''
     })
     assert response.status_code == 200
-    assert b"Stock symbol is required." in response.data  # Check if error message is shown
+    # Check if error message is shown
+    assert b"Company name is required." in response.data
+
 
 # Test: POST request with invalid stock symbol
+
+
 def test_post_invalid_symbol(client):
     response = client.post('/', data={
-        'symbol': 'FAKE',
+        'name': 'ThisCompanyDoesNotExist',
         'start_date': '2025-03-01',
         'end_date': '2025-03-10'
     })
     assert response.status_code == 200
-    assert b"Error fetching stock news" in response.data  # Check if error message is shown
-
+    # Check if error message is shown
+    assert b"Error fetching company news" in response.data

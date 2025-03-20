@@ -1,0 +1,10 @@
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore virtual environment
+venv/
+src/__pycache__/
+tests/__pycache__/
+# .env

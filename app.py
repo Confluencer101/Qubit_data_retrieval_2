@@ -13,13 +13,14 @@ mongo_uri = os.getenv("JACK_MONGO_URI")  # Change to JACK URI when deploying
 app = Flask(__name__)
 
 # Connect to MongoDB
-client = MongoClient(mongo_uri)
+client: MongoClient = MongoClient(mongo_uri)
 # db = client["qubit_database"]  # Change to JACK URI database when deploying
 # collection = db["company_news"]  # Change to JACK URI database when deploying
 db = client["quant_data"]
 collection = db["news_api"]
 
 API_BASE_URL = "http://127.0.0.1:5000/company"
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -53,12 +54,19 @@ def index():
     return render_template('index.html', news=news, error=error)
 
 # GET latest news for a specific company (no date filtering)
+
+
 @app.route("/company/<name>", methods=["GET"])
 def get_company_news(name):
-    query = {"attribute.title": {"$regex": name, "$options": "i"}}
+    query = {"$or": []}
+    query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
+    query["$or"].append(
+        {"attribute.description": {"$regex": name, "$options": "i"}})
+
     limit = request.args.get("limit", default=10, type=int)
 
-    company_news = list(collection.find(query, {"_id": 0}).sort("time_object.timestamp", -1).limit(limit))
+    company_news = list(collection.find(query, {"_id": 0}).sort(
+        "time_object.timestamp", -1).limit(limit))
 
     if not company_news:
 
@@ -67,9 +75,15 @@ def get_company_news(name):
     return jsonify(company_news), 200
 
 # GET news for a specific company within a date range
+
+
 @app.route("/company/<name>/range", methods=["GET"])
 def get_company_news_range(name):
-    query = {"attribute.title": {"$regex": name, "$options": "i"}}
+    query = {"$or": []}
+    query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
+    query["$or"].append(
+        {"attribute.description": {"$regex": name, "$options": "i"}})
+
     limit = request.args.get("limit", default=10, type=int)
 
     start_date = request.args.get("start_date")
@@ -83,16 +97,20 @@ def get_company_news_range(name):
         if end_date:
             # Parse end_date and extend to the end of the day
             end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-            end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-            date_filter["$lte"] = end_dt  # End of the day: 2025-03-15 23:59:59.999
+            end_dt = end_dt.replace(
+                hour=23, minute=59, second=59, microsecond=999999)
+            # End of the day: 2025-03-15 23:59:59.999
+            date_filter["$lte"] = end_dt
         query["time_object.timestamp"] = date_filter
 
-    company_news = list(collection.find(query, {"_id": 0}).sort("time_object.timestamp", -1).limit(limit))
+    company_news = list(collection.find(query, {"_id": 0}).sort(
+        "time_object.timestamp", -1).limit(limit))
 
     if not company_news:
         return jsonify({"message": f"No news found for {name} in the given date range"}), 404
 
     return jsonify(company_news), 200
+
 
 if __name__ == "__main__":
     app.run(debug=True)
