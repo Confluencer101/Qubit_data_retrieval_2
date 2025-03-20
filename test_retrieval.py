@@ -59,7 +59,7 @@ def test_get_company_news_range(client):
         # published_date = datetime.fromisoformat(article["time_object"]["timestamp"]).replace(tzinfo=pytz.utc)
         published_date = parser.parse(
             article["time_object"]["timestamp"]).replace(tzinfo=pytz.utc)
-     # This should be in the correct ISO format
+        # This should be in the correct ISO format
         assert datetime(2025, 3, 7, tzinfo=pytz.utc).date(
         ) <= published_date.date() <= datetime(2025, 3, 9, tzinfo=pytz.utc).date()
 
