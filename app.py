@@ -58,7 +58,10 @@ def index():
 
 @app.route("/company/<name>", methods=["GET"])
 def get_company_news(name):
-    query = {"attribute.title": {"$regex": name, "$options": "i"}}
+    query = {"$or": []}
+    query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
+    query["$or"].append({"attribute.description": {"$regex": name, "$options": "i"}})
+
     limit = request.args.get("limit", default=10, type=int)
 
     company_news = list(collection.find(query, {"_id": 0}).sort(
@@ -75,7 +78,10 @@ def get_company_news(name):
 
 @app.route("/company/<name>/range", methods=["GET"])
 def get_company_news_range(name):
-    query = {"attribute.title": {"$regex": name, "$options": "i"}}
+    query = {"$or": []}
+    query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
+    query["$or"].append({"attribute.description": {"$regex": name, "$options": "i"}})
+
     limit = request.args.get("limit", default=10, type=int)
 
     start_date = request.args.get("start_date")
