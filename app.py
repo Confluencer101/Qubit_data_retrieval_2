@@ -53,63 +53,6 @@ def index():
 
     return render_template('index.html', news=news, error=error)
 
-# GET latest news for a specific company (no date filtering)
-
-
-# @app.route("/company/<name>", methods=["GET"])
-# def get_company_news(name):
-#     query = {"$or": []}
-#     query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
-#     query["$or"].append(
-#         {"attribute.description": {"$regex": name, "$options": "i"}})
-
-#     limit = request.args.get("limit", default=10, type=int)
-
-#     company_news = list(collection.find(query, {"_id": 0}).sort(
-#         "time_object.timestamp", -1).limit(limit))
-
-#     if not company_news:
-
-#         return jsonify({"message": f"No news found for {name}"}), 404
-
-#     return jsonify(company_news), 200
-
-# # GET news for a specific company within a date range
-
-
-# @app.route("/company/<name>/range", methods=["GET"])
-# def get_company_news_range(name):
-#     query = {"$or": []}
-#     query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
-#     query["$or"].append(
-#         {"attribute.description": {"$regex": name, "$options": "i"}})
-
-#     limit = request.args.get("limit", default=10, type=int)
-
-#     start_date = request.args.get("start_date")
-#     end_date = request.args.get("end_date")
-
-#     if start_date or end_date:
-#         date_filter = {}
-#         if start_date:
-#             start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-#             date_filter["$gte"] = start_dt
-#         if end_date:
-#             # Parse end_date and extend to the end of the day
-#             end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-#             end_dt = end_dt.replace(
-#                 hour=23, minute=59, second=59, microsecond=999999)
-#             # End of the day: 2025-03-15 23:59:59.999
-#             date_filter["$lte"] = end_dt
-#         query["time_object.timestamp"] = date_filter
-
-#     company_news = list(collection.find(query, {"_id": 0}).sort(
-#         "time_object.timestamp", -1).limit(limit))
-
-#     if not company_news:
-#         return jsonify({"message": f"No news found for {name} in the given date range"}), 404
-
-#     return jsonify(company_news), 200
 
 @app.route("/company/<name>", methods=["GET"])
 def get_company_news(name):
@@ -131,13 +74,23 @@ def get_company_news(name):
 
         # Parse end_date and extend to the end of the day (23:59:59.999)
         end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-        end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+        # end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
 
     else:
         # If either start_date or end_date is missing, default to one week before today and today's date
         time_now = datetime.datetime.now()
-        start_dt = time_now - datetime.timedelta(days=7)  # One week before today
-        end_dt = time_now  # Today's date
+        # One week before today
+        start_dt = time_now - datetime.timedelta(days=7)
+        # Today's date
+        end_dt = time_now
+
+    ###########################################################################################################################
+    # THE NEW LOGIC GOES HERE
+    start_dt_str = start_dt.strftime('%d-%m-%Y')
+    end_dt_str = end_dt.strftime('%d-%m-%Y')
+
+    
+    ###########################################################################################################################
 
     date_filter = {"$gte": start_dt, "$lte": end_dt}
 
