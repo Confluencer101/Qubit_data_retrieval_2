@@ -19,8 +19,13 @@ client: MongoClient = MongoClient(mongo_uri)
 # collection = db["company_news"]  # Change to JACK URI database when deploying
 db = client["quant_data"]
 collection = db["news_api"]
+interval_collection = db["company_index"]
 
 API_BASE_URL = "http://127.0.0.1:5000/company"
+
+def convert_date_format(date_str):
+    date_obj = datetime.strptime(date_str, "%d-%m-%Y")
+    return date_obj.strftime("%Y-%m-%d")
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -90,22 +95,26 @@ def get_company_news(name):
     start_dt_str = start_dt.strftime('%d-%m-%Y')
     end_dt_str = end_dt.strftime('%d-%m-%Y')
 
-    #THE QUERY TO GET THE TIME INTERVAL FROM DB GOES HERE SO THE VARIABLE BELOW WILL HAVE THE TIMEINTERVAL VALUE
-    time_intervals = []
+    time_intervals = interval_collection.find_one({"name": name}, {"_id": 0, "intervals": 1})
+
     data_availability = is_data_available(time_intervals, start_dt_str, end_dt_str)
 
     start = data_availability["start"]
     end = data_availability["end"]
     need = data_availability["need"]
 
+    base_url = "http://example.com/newsapi"
+    start_data = []
+    needed_data = []
+    end_data = []
 
-    if (start == end and need == None):
+    if (start == end and need == None) or (start is not None and end is None):
         # Only query the database
         start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
         end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
         date_filter = {"$gte": start_dt, "$lte": end_dt}
         query["time_object.timestamp"] = date_filter
-        company_news = list(collection.find(query, {"_id": 0}).sort(
+        start_data = list(collection.find(query, {"_id": 0}).sort(
             "time_object.timestamp", -1).limit(limit))
     elif (start is None and end is not None):
         # query the database for the end
@@ -113,52 +122,55 @@ def get_company_news(name):
         end_dt = datetime.datetime.strptime(end[1], "%d-%m-%Y")
         date_filter = {"$gte": start_dt, "$lte": end_dt}
         query["time_object.timestamp"] = date_filter
-        end_company_news = list(collection.find(query, {"_id": 0}).sort(
+        end_data = list(collection.find(query, {"_id": 0}).sort(
             "time_object.timestamp", -1).limit(limit))
-        # request the collection for the need
-    elif (start is not None and end is None):
-        # query the database for the start
-        start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
-        end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
-        date_filter = {"$gte": start_dt, "$lte": end_dt}
-        query["time_object.timestamp"] = date_filter
-        start_company_news = list(collection.find(query, {"_id": 0}).sort(
-            "time_object.timestamp", -1).limit(limit))
-
-        # request the collection for the need
-    elif (start is None and end is None):
-        return ""
-        # request the data_collection for the need
-    else:
+        
+    elif (start is not None and end is not None and need is not None and start != end):
         # query the database for start
         start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
         end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
         date_filter = {"$gte": start_dt, "$lte": end_dt}
         query["time_object.timestamp"] = date_filter
-        start_company_news = list(collection.find(query, {"_id": 0}).sort(
+        start_data = list(collection.find(query, {"_id": 0}).sort(
             "time_object.timestamp", -1).limit(limit))
         # query the database for end
         start_dt = datetime.datetime.strptime(end[0], "%d-%m-%Y")
         end_dt = datetime.datetime.strptime(end[1], "%d-%m-%Y")
         date_filter = {"$gte": start_dt, "$lte": end_dt}
         query["time_object.timestamp"] = date_filter
-        end_company_news = list(collection.find(query, {"_id": 0}).sort(
+        end_data = list(collection.find(query, {"_id": 0}).sort(
             "time_object.timestamp", -1).limit(limit))
         
-        # request the collection for the need
+        
+    if (need is not None):
+        params = {
+            'name': name,
+            'from_date': convert_date_format(need[0]),
+            'to_date': convert_date_format(need[1])
+        }
+        # Send the GET request
+        response = requests.get(base_url, params=params)
+        if response.status_code == 200:
+            needed_data = response.json().get("events")
     
+    finalEvents = start_data + needed_data + end_data
 
-
+    
     ###########################################################################################################################
 
 
 
-    if not company_news:
-        if start_date or end_date:
+    if not finalEvents:
+        if start_date and end_date:
             return jsonify({"message": f"No news found for {name} in the given date range"}), 404
         else:
-            return jsonify({"message": f"No news found for {name}"}), 404
-
+            return jsonify({"message": f"No news found for {name} in the past week"}), 404
+    company_news = { 
+        'data_source': 'news_api_org', 
+        'dataset_id': '1', 
+        'dataset_type': 'News data', 
+        'events': finalEvents
+    }
     return jsonify(company_news), 200
 
 
