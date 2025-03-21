@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 import requests
 import datetime
+from time_interval import is_data_available
 
 # Load environment variables
 load_dotenv()
@@ -89,18 +90,68 @@ def get_company_news(name):
     start_dt_str = start_dt.strftime('%d-%m-%Y')
     end_dt_str = end_dt.strftime('%d-%m-%Y')
 
+    #THE QUERY TO GET THE TIME INTERVAL FROM DB GOES HERE SO THE VARIABLE BELOW WILL HAVE THE TIMEINTERVAL VALUE
+    time_intervals = []
+    data_availability = is_data_available(time_intervals, start_dt_str, end_dt_str)
+
+    start = data_availability["start"]
+    end = data_availability["end"]
+    need = data_availability["need"]
+
+
+    if (start == end and need == None):
+        # Only query the database
+        start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
+        end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
+        date_filter = {"$gte": start_dt, "$lte": end_dt}
+        query["time_object.timestamp"] = date_filter
+        company_news = list(collection.find(query, {"_id": 0}).sort(
+            "time_object.timestamp", -1).limit(limit))
+    elif (start is None and end is not None):
+        # query the database for the end
+        start_dt = datetime.datetime.strptime(end[0], "%d-%m-%Y")
+        end_dt = datetime.datetime.strptime(end[1], "%d-%m-%Y")
+        date_filter = {"$gte": start_dt, "$lte": end_dt}
+        query["time_object.timestamp"] = date_filter
+        end_company_news = list(collection.find(query, {"_id": 0}).sort(
+            "time_object.timestamp", -1).limit(limit))
+        # request the collection for the need
+    elif (start is not None and end is None):
+        # query the database for the start
+        start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
+        end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
+        date_filter = {"$gte": start_dt, "$lte": end_dt}
+        query["time_object.timestamp"] = date_filter
+        start_company_news = list(collection.find(query, {"_id": 0}).sort(
+            "time_object.timestamp", -1).limit(limit))
+
+        # request the collection for the need
+    elif (start is None and end is None):
+        return ""
+        # request the data_collection for the need
+    else:
+        # query the database for start
+        start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
+        end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
+        date_filter = {"$gte": start_dt, "$lte": end_dt}
+        query["time_object.timestamp"] = date_filter
+        start_company_news = list(collection.find(query, {"_id": 0}).sort(
+            "time_object.timestamp", -1).limit(limit))
+        # query the database for end
+        start_dt = datetime.datetime.strptime(end[0], "%d-%m-%Y")
+        end_dt = datetime.datetime.strptime(end[1], "%d-%m-%Y")
+        date_filter = {"$gte": start_dt, "$lte": end_dt}
+        query["time_object.timestamp"] = date_filter
+        end_company_news = list(collection.find(query, {"_id": 0}).sort(
+            "time_object.timestamp", -1).limit(limit))
+        
+        # request the collection for the need
     
+
+
     ###########################################################################################################################
 
-    date_filter = {"$gte": start_dt, "$lte": end_dt}
 
-    # Apply the date filter to the query
-    query["time_object.timestamp"] = date_filter
-
-
-    # Fetch the news from the collection
-    company_news = list(collection.find(query, {"_id": 0}).sort(
-        "time_object.timestamp", -1).limit(limit))
 
     if not company_news:
         if start_date or end_date:
