@@ -49,7 +49,7 @@ pdf.cell(text=" ", new_x="LMARGIN", new_y="NEXT")
 
 pdf.set_font("courier", size=12)
 try:
-    with open("test_results.txt", "r") as test_results:
+    with open("test_results_incomplete/test_results.txt", "r") as test_results:
         lines = test_results.readlines()
 
         for line in lines:
@@ -71,7 +71,7 @@ pdf.cell(text=" ", new_x="LMARGIN", new_y="NEXT")
 
 pdf.set_font("courier", size=12)
 try:
-    with open("coverage.txt", "r") as coverage_report:
+    with open("coverage_incomplete/coverage.txt", "r") as coverage_report:
         lines = coverage_report.readlines()
 
         for line in lines:
@@ -89,7 +89,7 @@ pdf.cell(text="Our code has been linted with flake8 to ensure conformity to PEP-
          new_x="LMARGIN", new_y="NEXT")
 
 try:
-    with open("linting.txt", "r") as linting:
+    with open("linting_incomplete/linting.txt", "r") as linting:
         lines = linting.readlines()
 
         if len(lines) == 2 and lines[0].rstrip('\n') == "0" and lines[1].rstrip('\n') == "0":
@@ -129,7 +129,7 @@ pdf.cell(text=" ", new_x="LMARGIN", new_y="NEXT")
 
 pdf.set_font("courier", size=12)
 try:
-    with open("type_checking.txt", "r") as type_checking:
+    with open("type_checking_incomplete/type_checking.txt", "r") as type_checking:
         lines = type_checking.readlines()
 
         if not lines[0].startswith("Success"):
