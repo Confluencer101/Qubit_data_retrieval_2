@@ -7,5 +7,3 @@
 - Test Command =  pytest --cov=. test_retrieval.py test_frontend.py
 
 ![Pipeline](https://github.com/Confluencer101/Qubit_data_retrieval_2/actions/workflows/data-retrieval-ci.yml/badge.svg)
-
-[![Data Retrieval Testing Report](https://img.shields.io/badge/Artifact-Download-blue)](https://github.com/Confluencer101/Qubit_data_retrieval_2/actions/runs/${GITHUB_RUN_ID}/artifacts/data-retrieval-testing-report)
