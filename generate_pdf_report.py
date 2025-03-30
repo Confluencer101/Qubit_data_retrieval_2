@@ -6,7 +6,8 @@ import datetime
 # Set constants and variables
 PDF_TITLE = "Qubit Data Retrieval: Testing report"
 TEST_FRAMEWORK = "pytest"
-current_time = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=11))).ctime()
+current_time = datetime.datetime.now(
+    datetime.timezone(datetime.timedelta(hours=11))).ctime()
 
 unit_tests_pass = True
 linting_pass = True
@@ -23,7 +24,7 @@ def pass_or_fail(boolean: bool):
 
 
 # Set up PDF
-pdf = fpdf.FPDF()
+pdf = fpdf.FPDF(orientation="L")
 pdf.set_title(f"{PDF_TITLE} - {current_time}")
 pdf.add_page()
 
@@ -121,9 +122,7 @@ pdf.set_font("helvetica", size=15, style="B")
 pdf.cell(text=" ", new_x="LMARGIN", new_y="NEXT")
 pdf.cell(text="Type Checking", new_x="LMARGIN", new_y="NEXT")
 pdf.set_font("helvetica", size=12)
-pdf.cell(text="Since Python is dynamically typed, we used mypy to ensure type safety.",
-         new_x="LMARGIN", new_y="NEXT")
-pdf.cell(text="Here are the results of our type checking:",
+pdf.cell(text="Since Python is dynamically typed, we used mypy to ensure type safety. Here are the results of our type checking:",
          new_x="LMARGIN", new_y="NEXT")
 pdf.cell(text=" ", new_x="LMARGIN", new_y="NEXT")
 

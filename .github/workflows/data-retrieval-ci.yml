@@ -129,5 +129,5 @@ jobs:
     - name: Upload PDF report as a GitHub artifact
       uses: actions/upload-artifact@v4
       with:
-        name: data-analytics-testing-report
+        name: data-retrieval-testing-report
         path: testing_report.pdf
