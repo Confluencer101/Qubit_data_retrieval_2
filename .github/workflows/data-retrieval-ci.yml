@@ -30,17 +30,18 @@ jobs:
         pip install pytest coverage
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Test with pytest and record test coverage
-      continue-on-error: true
       run: |
         set -o pipefail
         python3 -m coverage run -m pytest test_*.py | tee test_results.txt
         coverage report -m | tee coverage.txt
     - name: Upload test results as a GitHub artifact
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: test_results_incomplete
         path: test_results.txt
     - name: Upload coverage as a GitHub artifact
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: coverage_incomplete
@@ -63,13 +64,13 @@ jobs:
         pip install flake8
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
-      continue-on-error: true
       run: |
         set -o pipefail
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics | tee linting.txt
         flake8 . --count --max-complexity=10 --statistics --ignore=E501 | tee -a linting.txt
     - name: Upload linting results as a GitHub artifact
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: linting_incomplete
@@ -92,11 +93,11 @@ jobs:
         pip install mypy types-fpdf2
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Type checking with mypy
-      continue-on-error: true
       run: |
         set -o pipefail
         python3 -m mypy . | tee type_checking.txt
     - name: Upload type checking as a GitHub artifact
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: type_checking_incomplete
