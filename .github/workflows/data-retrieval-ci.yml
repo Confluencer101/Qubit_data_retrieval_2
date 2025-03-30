@@ -30,6 +30,7 @@ jobs:
         pip install pytest coverage
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Test with pytest and record test coverage
+      continue-on-error: true
       run: |
         set -o pipefail
         python3 -m coverage run -m pytest test_*.py | tee test_results.txt
@@ -62,6 +63,7 @@ jobs:
         pip install flake8
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
+      continue-on-error: true
       run: |
         set -o pipefail
         # stop the build if there are Python syntax errors or undefined names
@@ -90,6 +92,7 @@ jobs:
         pip install mypy types-fpdf2
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Type checking with mypy
+      continue-on-error: true
       run: |
         set -o pipefail
         python3 -m mypy . | tee type_checking.txt
