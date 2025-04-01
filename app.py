@@ -4,11 +4,12 @@ from dotenv import load_dotenv
 import os
 import requests
 import datetime
+from dateutil.parser import parse
 from time_interval import is_data_available
 
 # Load environment variables
 load_dotenv()
-mongo_uri = os.getenv("JACK_MONGO_URI")  # Change to JACK URI when deploying
+mongo_uri = os.getenv("PAUL_MONGO_URI")  # Change to JACK URI when deploying
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -24,8 +25,10 @@ interval_collection = db["company_index"]
 API_BASE_URL = "http://127.0.0.1:5000/company"
 
 def convert_date_format(date_str):
-    date_obj = datetime.strptime(date_str, "%d-%m-%Y")
-    return date_obj.strftime("%Y-%m-%d")
+    #date_obj = datetime.strptime(date_str, "%d-%m-%Y")
+   # return datetime.fromisoformat(date_str.rstrip("Z")).strftime("%Y-%m-%d")
+    #return date_obj.strftime("%Y-%m-%d")
+    return parse(date_str).strftime("%Y-%m-%d")
 
 
 @app.route('/', methods=['GET', 'POST'])
