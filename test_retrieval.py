@@ -67,7 +67,8 @@ def test_get_company_news_range(client):
 
 
 def test_get_company_news_not_found(client):
-    response = client.get("/company/ThisCompanyDoesNotExist?api_key=hrppk6zHXrrFYM3CHqx0_Q")
+    response = client.get(
+        "/company/ThisCompanyDoesNotExist?api_key=hrppk6zHXrrFYM3CHqx0_Q")
     assert response.status_code == 404
     data = response.get_json()
     assert data["message"] == "No news found for ThisCompanyDoesNotExist"

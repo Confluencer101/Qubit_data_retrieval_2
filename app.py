@@ -22,21 +22,24 @@ collection = db["news_api"]
 API_BASE_URL = "http://127.0.0.1:5000/company"
 
 # Function to authenticate:
+
+
 def auth_api_key(api_key):
     auth_url = 'http://170.64.139.10:8080/validate'
     data = {
         'apiKey': api_key
     }
-    
+
     headers = {
         'Content-Type': 'application/json'
     }
-    
+
     response = requests.post(auth_url, json=data, headers=headers)
     if response.status_code == 200:
         return response.json()
     else:
         return Exception(f"API key validation failed {response.status_code}")
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -70,6 +73,8 @@ def index():
     return render_template('index.html', news=news, error=error)
 
 # GET latest news for a specific company (no date filtering)
+
+
 @app.route("/company/<name>", methods=["GET"])
 def get_company_news(name):
     try:
@@ -78,7 +83,8 @@ def get_company_news(name):
             return jsonify({"error": "API key is required"}), 400
         auth_api_key(api_key)
         query = {"$or": []}
-        query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
+        query["$or"].append(
+            {"attribute.title": {"$regex": name, "$options": "i"}})
         query["$or"].append(
             {"attribute.description": {"$regex": name, "$options": "i"}})
 
@@ -96,7 +102,7 @@ def get_company_news(name):
         error_msg = str(e)
         status_code = 401 if "API key validation failed" in error_msg else 403
         return jsonify({"error": error_msg}), status_code
-        
+
 
 # GET news for a specific company within a date range
 @app.route("/company/<name>/range", methods=["GET"])
@@ -107,7 +113,8 @@ def get_company_news_range(name):
             return jsonify({"error": "API key is required"}), 400
         auth_api_key(api_key)
         query = {"$or": []}
-        query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
+        query["$or"].append(
+            {"attribute.title": {"$regex": name, "$options": "i"}})
         query["$or"].append(
             {"attribute.description": {"$regex": name, "$options": "i"}})
 
