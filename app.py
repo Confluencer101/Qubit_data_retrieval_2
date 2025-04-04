@@ -23,7 +23,7 @@ API_BASE_URL = "http://127.0.0.1:5000/company"
 
 # Function to authenticate:
 def auth_api_key(api_key):
-    auth_url = 'http://170.64.234.73:8080/validate'
+    auth_url = 'http://170.64.139.10:8080/validate'
     data = {
         'apiKey': api_key
     }
