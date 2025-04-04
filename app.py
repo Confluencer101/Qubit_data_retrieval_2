@@ -9,25 +9,21 @@ from time_interval import is_data_available
 
 # Load environment variables
 load_dotenv()
-mongo_uri = os.getenv("PAUL_MONGO_URI")  # Change to JACK URI when deploying
+mongo_uri = os.getenv("JACK_MONGO_URI")  
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Connect to MongoDB
 client: MongoClient = MongoClient(mongo_uri)
-# db = client["qubit_database"]  # Change to JACK URI database when deploying
-# collection = db["company_news"]  # Change to JACK URI database when deploying
 db = client["quant_data"]
 collection = db["news_api"]
 interval_collection = db["company_index"]
 
-API_BASE_URL = "http://127.0.0.1:5000/company"
+API_BASE_URL = "http://170.64.135.87/newsapi"
+
 
 def convert_date_format(date_str):
-    #date_obj = datetime.strptime(date_str, "%d-%m-%Y")
-   # return datetime.fromisoformat(date_str.rstrip("Z")).strftime("%Y-%m-%d")
-    #return date_obj.strftime("%Y-%m-%d")
     return parse(date_str).strftime("%Y-%m-%d")
 
 
@@ -35,26 +31,24 @@ def convert_date_format(date_str):
 def index():
     news = None
     error = None
-
     if request.method == 'POST':
         name = request.form.get('name')
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
-
         if not name:
             error = "Company name is required."
         else:
-            params = {"name": name.upper()}
+            url = f"/company/{name}"
+            params = {}
 
             if start_date and end_date:
-                url = f"{API_BASE_URL}/{name}/range"
                 params['start_date'] = start_date
                 params['end_date'] = end_date
-            else:
-                url = f"{API_BASE_URL}/{name}"
 
             try:
-                response = requests.get(url, params=params)
+                # Make an internal request to your own API
+                api_url = request.host_url.rstrip('/') + url
+                response = requests.get(api_url, params=params)
                 response.raise_for_status()
                 news = response.json()
             except requests.exceptions.RequestException as e:
@@ -74,17 +68,10 @@ def get_company_news(name):
     start_date = request.args.get("start_date", default=None, type=str)
     end_date = request.args.get("end_date", default=None, type=str)
 
-
     # If both start_date and end_date are provided, apply the date range filter
     if start_date and end_date:
-        date_filter = {}
-
         start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-
-        # Parse end_date and extend to the end of the day (23:59:59.999)
         end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-        # end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-
     else:
         # If either start_date or end_date is missing, default to one week before today and today's date
         time_now = datetime.datetime.now()
@@ -98,80 +85,108 @@ def get_company_news(name):
     start_dt_str = start_dt.strftime('%d-%m-%Y')
     end_dt_str = end_dt.strftime('%d-%m-%Y')
 
-    time_intervals = interval_collection.find_one({"name": name}, {"_id": 0, "intervals": 1})
+    # Get time intervals for the company
+    company_data = interval_collection.find_one({"name": name})
+    time_intervals = company_data.get(
+        "time_intervals", []) if company_data else []
 
-    data_availability = is_data_available(time_intervals, start_dt_str, end_dt_str)
+    # Check data availability
+    data_availability = is_data_available(
+        time_intervals, start_dt_str, end_dt_str)
 
     start = data_availability["start"]
     end = data_availability["end"]
     need = data_availability["need"]
 
-    base_url = "http://example.com/newsapi"
     start_data = []
     needed_data = []
     end_data = []
 
-    if (start == end and need == None) or (start is not None and end is None):
-        # Only query the database
+    # Case 1: Only query the database - data fully available
+    if (start == end and need is None) or (start is not None and end is None):
         start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
         end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
         date_filter = {"$gte": start_dt, "$lte": end_dt}
         query["time_object.timestamp"] = date_filter
         start_data = list(collection.find(query, {"_id": 0}).sort(
             "time_object.timestamp", -1).limit(limit))
-    elif (start is None and end is not None):
-        # query the database for the end
+
+    # Case 2: Only the end portion is available
+    elif start is None and end is not None:
         start_dt = datetime.datetime.strptime(end[0], "%d-%m-%Y")
         end_dt = datetime.datetime.strptime(end[1], "%d-%m-%Y")
         date_filter = {"$gte": start_dt, "$lte": end_dt}
         query["time_object.timestamp"] = date_filter
         end_data = list(collection.find(query, {"_id": 0}).sort(
             "time_object.timestamp", -1).limit(limit))
-        
-    elif (start is not None and end is not None and need is not None and start != end):
-        # query the database for start
+
+    # Case 3: Both start and end portions available, but need middle portion
+    elif start is not None and end is not None and need is not None and start != end:
+        # Query for start portion
         start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
         end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
         date_filter = {"$gte": start_dt, "$lte": end_dt}
         query["time_object.timestamp"] = date_filter
         start_data = list(collection.find(query, {"_id": 0}).sort(
             "time_object.timestamp", -1).limit(limit))
-        # query the database for end
+
+        # Query for end portion
         start_dt = datetime.datetime.strptime(end[0], "%d-%m-%Y")
         end_dt = datetime.datetime.strptime(end[1], "%d-%m-%Y")
         date_filter = {"$gte": start_dt, "$lte": end_dt}
         query["time_object.timestamp"] = date_filter
         end_data = list(collection.find(query, {"_id": 0}).sort(
             "time_object.timestamp", -1).limit(limit))
-        
-        
-    if (need is not None):
+
+    # Handle missing data - make API call
+    if need is not None:
+        from_date = convert_date_format(need[0])
+        to_date = convert_date_format(need[1])
+
+        # Construct API request
         params = {
             'name': name,
-            'from_date': convert_date_format(need[0]),
-            'to_date': convert_date_format(need[1])
+            'from_date': from_date,
+            'to_date': to_date
         }
-        # Send the GET request
-        response = requests.get(base_url, params=params)
-        if response.status_code == 200:
-            needed_data = response.json().get("events")
-    
+
+        # Send the GET request to external API
+        try:
+            response = requests.get(API_BASE_URL, params=params)
+            response.raise_for_status()  # Raise exception for non-200 status codes
+
+            # Try to parse JSON response
+            response_data = response.json()
+
+            # Check the structure of the response
+            if isinstance(response_data, dict) and "events" in response_data:
+                needed_data = response_data["events"]
+            else:
+                needed_data = response_data if isinstance(
+                    response_data, list) else []
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching data from API: {str(e)}")
+            needed_data = []
+        except ValueError as e:  # JSON parsing error
+            print(f"Error parsing API response: {str(e)}")
+            needed_data = []
+
+    # Combine all data
     finalEvents = start_data + needed_data + end_data
 
-    
     ###########################################################################################################################
-
-
 
     if not finalEvents:
         if start_date and end_date:
             return jsonify({"message": f"No news found for {name} in the given date range"}), 404
         else:
             return jsonify({"message": f"No news found for {name} in the past week"}), 404
-    company_news = { 
-        'data_source': 'news_api_org', 
-        'dataset_id': '1', 
-        'dataset_type': 'News data', 
+
+    company_news = {
+        'data_source': 'news_api_org',
+        'dataset_id': '1',
+        'dataset_type': 'News data',
         'events': finalEvents
     }
     return jsonify(company_news), 200
