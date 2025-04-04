@@ -45,24 +45,6 @@ def auth_api_key(api_key):
 
 # Function to authenticate:
 
-
-def auth_api_key(api_key):
-    auth_url = 'http://170.64.139.10:8080/validate'
-    data = {
-        'apiKey': api_key
-    }
-
-    headers = {
-        'Content-Type': 'application/json'
-    }
-
-    response = requests.post(auth_url, json=data, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return Exception(f"API key validation failed {response.status_code}")
-
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     news = None
