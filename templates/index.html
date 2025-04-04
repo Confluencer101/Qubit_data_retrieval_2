@@ -9,15 +9,17 @@
         body { padding: 20px; }
         .container { max-width: 800px; margin: auto; }
         .hidden { display: none; }
-        .article-item { margin-bottom: 15px; }
-        .article-title { font-size: 1.25rem; }
-        .article-meta { color: #6c757d; font-size: 0.9rem; }
+        .article-item { margin-bottom: 20px; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; }
+        .article-title { font-size: 1.25rem; margin-bottom: 8px; }
+        .article-meta { color: #6c757d; font-size: 0.9rem; margin-bottom: 10px; }
         .article-desc { margin-top: 5px; }
+        .loading-spinner { width: 3rem; height: 3rem; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="text-center mb-4">Company News Lookup</h1>
+        
         <form method="post" id="companyForm">
             <div class="mb-3">
                 <label for="name" class="form-label">Company Name:</label>
@@ -34,31 +36,61 @@
             <button type="submit" class="btn btn-primary w-100">Get News</button>
         </form>
         
-        <div id="loading" class="alert alert-info mt-3 hidden">Fetching news...</div>
+        <div id="loading" class="text-center mt-4 hidden">
+            <div class="spinner-border loading-spinner text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Fetching news...</p>
+        </div>
         
         {% if error %}
-            <div class="alert alert-danger mt-3">{{ error }}</div>
+        <div class="alert alert-danger mt-3">{{ error }}</div>
         {% endif %}
         
         {% if news %}
-            <h2 class="mt-4">News Results</h2>
-            <div class="mt-3">
-                {% for article in news %}
-                    <div class="article-item">
-                        <h3 class="article-title">{{ article.attribute.title }}</h3>
-                        <p class="article-meta">
-                            Published: {{ article.time_object.timestamp[:10] }} | 
-                            Publisher: {{ article.attribute.publisher }} | 
-                            Author: {{ article.attribute.author }}
-                        </p>
-                        <p class="article-desc">{{ article.attribute.description }}</p>
-                        <a href="{{ article.attribute.url }}" target="_blank" class="btn btn-sm btn-outline-primary">Read More</a>
-                    </div>
-                {% endfor %}
+        <div class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="mb-0">News Results</h2>
+                <small class="text-muted">Source: {{ news.data_source }} | Type: {{ news.dataset_type }}</small>
             </div>
+            
+            {% if news.events|length > 0 %}
+                {% for article in news.events %}
+                <div class="article-item">
+                    <h3 class="article-title">{{ article.attribute.title }}</h3>
+                    <div class="article-meta">
+                        <div>Published: {{ article.time_object.timestamp|truncate(16, True, '') }}</div>
+                        <div>Publisher: {{ article.attribute.publisher }}</div>
+                        {% if article.attribute.author %}
+                        <div>Author: {{ article.attribute.author|truncate(50, True, '...') }}</div>
+                        {% endif %}
+                    </div>
+                    <p class="article-desc">{{ article.attribute.description }}</p>
+                    <a href="{{ article.attribute.url }}" target="_blank" class="btn btn-sm btn-outline-primary">Read More</a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">No news articles found for this company.</div>
+            {% endif %}
+        </div>
         {% endif %}
     </div>
+    
     <script>
+        // Set default dates (last 7 days)
+        window.addEventListener('load', function() {
+            const today = new Date();
+            const lastWeek = new Date();
+            lastWeek.setDate(today.getDate() - 7);
+            
+            document.getElementById('end_date').value = formatDate(today);
+            document.getElementById('start_date').value = formatDate(lastWeek);
+            
+            function formatDate(date) {
+                return date.toISOString().slice(0, 10);
+            }
+        });
+        
         document.getElementById("companyForm").addEventListener("submit", function() {
             document.getElementById("loading").classList.remove("hidden");
         });

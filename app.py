@@ -4,22 +4,44 @@ from dotenv import load_dotenv
 import os
 import requests
 import datetime
+from dateutil.parser import parse
+from time_interval import is_data_available
 
 # Load environment variables
 load_dotenv()
-mongo_uri = os.getenv("JACK_MONGO_URI")  # Change to JACK URI when deploying
+mongo_uri = os.getenv("JACK_MONGO_URI")
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Connect to MongoDB
 client: MongoClient = MongoClient(mongo_uri)
-# db = client["qubit_database"]  # Change to JACK URI database when deploying
-# collection = db["company_news"]  # Change to JACK URI database when deploying
 db = client["quant_data"]
 collection = db["news_api"]
+interval_collection = db["company_index"]
 
-API_BASE_URL = "http://127.0.0.1:5000/company"
+API_BASE_URL = "http://170.64.135.87/newsapi"
+
+
+def convert_date_format(date_str):
+    return parse(date_str).strftime("%Y-%m-%d")
+
+
+def auth_api_key(api_key):
+    auth_url = 'http://170.64.139.10:8080/validate'
+    data = {
+        'apiKey': api_key
+    }
+
+    headers = {
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.post(auth_url, json=data, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return Exception(f"API key validation failed {response.status_code}")
 
 # Function to authenticate:
 
@@ -45,34 +67,30 @@ def auth_api_key(api_key):
 def index():
     news = None
     error = None
-
     if request.method == 'POST':
         name = request.form.get('name')
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
-
         if not name:
             error = "Company name is required."
         else:
-            params = {"name": name.upper()}
+            url = f"/company/{name}"
+            params = {}
 
             if start_date and end_date:
-                url = f"{API_BASE_URL}/{name}/range"
                 params['start_date'] = start_date
                 params['end_date'] = end_date
-            else:
-                url = f"{API_BASE_URL}/{name}"
 
             try:
-                response = requests.get(url, params=params)
+                # Make an internal request to your own API
+                api_url = request.host_url.rstrip('/') + url
+                response = requests.get(api_url, params=params)
                 response.raise_for_status()
                 news = response.json()
             except requests.exceptions.RequestException as e:
                 error = f"Error fetching company news: {str(e)}"
 
     return render_template('index.html', news=news, error=error)
-
-# GET latest news for a specific company (no date filtering)
 
 
 @app.route("/company/<name>", methods=["GET"])
@@ -82,72 +100,142 @@ def get_company_news(name):
         if not api_key:
             return jsonify({"error": "API key is required"}), 400
         auth_api_key(api_key)
-        query = {"$or": []}
-        query["$or"].append(
-            {"attribute.title": {"$regex": name, "$options": "i"}})
-        query["$or"].append(
-            {"attribute.description": {"$regex": name, "$options": "i"}})
-
-        limit = request.args.get("limit", default=10, type=int)
-
-        company_news = list(collection.find(query, {"_id": 0}).sort(
-            "time_object.timestamp", -1).limit(limit))
-
-        if not company_news:
-
-            return jsonify({"message": f"No news found for {name}"}), 404
-
-        return jsonify(company_news), 200
     except Exception as e:
         error_msg = str(e)
         status_code = 401 if "API key validation failed" in error_msg else 403
         return jsonify({"error": error_msg}), status_code
 
+    query = {"$or": []}
+    query["$or"].append({"attribute.title": {"$regex": name, "$options": "i"}})
+    query["$or"].append(
+        {"attribute.description": {"$regex": name, "$options": "i"}})
 
-# GET news for a specific company within a date range
-@app.route("/company/<name>/range", methods=["GET"])
-def get_company_news_range(name):
-    try:
-        api_key = request.args.get('api_key')
-        if not api_key:
-            return jsonify({"error": "API key is required"}), 400
-        auth_api_key(api_key)
-        query = {"$or": []}
-        query["$or"].append(
-            {"attribute.title": {"$regex": name, "$options": "i"}})
-        query["$or"].append(
-            {"attribute.description": {"$regex": name, "$options": "i"}})
+    limit = request.args.get("limit", default=10, type=int)
+    start_date = request.args.get("start_date", default=None, type=str)
+    end_date = request.args.get("end_date", default=None, type=str)
 
-        limit = request.args.get("limit", default=10, type=int)
+    # If both start_date and end_date are provided, apply the date range filter
+    if start_date and end_date:
+        start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+    else:
+        # If either start_date or end_date is missing, default to one week before today and today's date
+        time_now = datetime.datetime.now()
+        # One week before today
+        start_dt = time_now - datetime.timedelta(days=7)
+        # Today's date
+        end_dt = time_now
 
-        start_date = request.args.get("start_date")
-        end_date = request.args.get("end_date")
+    ###########################################################################################################################
+    # THE NEW LOGIC GOES HERE
+    start_dt_str = start_dt.strftime('%d-%m-%Y')
+    end_dt_str = end_dt.strftime('%d-%m-%Y')
 
-        if start_date or end_date:
-            date_filter = {}
-            if start_date:
-                start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-                date_filter["$gte"] = start_dt
-            if end_date:
-                # Parse end_date and extend to the end of the day
-                end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-                end_dt = end_dt.replace(
-                    hour=23, minute=59, second=59, microsecond=999999)
-                # End of the day: 2025-03-15 23:59:59.999
-                date_filter["$lte"] = end_dt
-            query["time_object.timestamp"] = date_filter
+    # Get time intervals for the company
+    company_data = interval_collection.find_one({"name": name})
+    time_intervals = company_data.get(
+        "time_intervals", []) if company_data else []
 
-        company_news = list(collection.find(query, {"_id": 0}).sort(
+    # Check data availability
+    data_availability = is_data_available(
+        time_intervals, start_dt_str, end_dt_str)
+
+    start = data_availability["start"]
+    end = data_availability["end"]
+    need = data_availability["need"]
+
+    start_data = []
+    needed_data = []
+    end_data = []
+
+    # Case 1: Only query the database - data fully available
+    if (start == end and need is None) or (start is not None and end is None):
+        start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
+        end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
+        date_filter = {"$gte": start_dt, "$lte": end_dt}
+        query["time_object.timestamp"] = date_filter
+        start_data = list(collection.find(query, {"_id": 0}).sort(
             "time_object.timestamp", -1).limit(limit))
 
-        if not company_news:
+    # Case 2: Only the end portion is available
+    elif start is None and end is not None:
+        start_dt = datetime.datetime.strptime(end[0], "%d-%m-%Y")
+        end_dt = datetime.datetime.strptime(end[1], "%d-%m-%Y")
+        date_filter = {"$gte": start_dt, "$lte": end_dt}
+        query["time_object.timestamp"] = date_filter
+        end_data = list(collection.find(query, {"_id": 0}).sort(
+            "time_object.timestamp", -1).limit(limit))
+
+    # Case 3: Both start and end portions available, but need middle portion
+    elif start is not None and end is not None and need is not None and start != end:
+        # Query for start portion
+        start_dt = datetime.datetime.strptime(start[0], "%d-%m-%Y")
+        end_dt = datetime.datetime.strptime(start[1], "%d-%m-%Y")
+        date_filter = {"$gte": start_dt, "$lte": end_dt}
+        query["time_object.timestamp"] = date_filter
+        start_data = list(collection.find(query, {"_id": 0}).sort(
+            "time_object.timestamp", -1).limit(limit))
+
+        # Query for end portion
+        start_dt = datetime.datetime.strptime(end[0], "%d-%m-%Y")
+        end_dt = datetime.datetime.strptime(end[1], "%d-%m-%Y")
+        date_filter = {"$gte": start_dt, "$lte": end_dt}
+        query["time_object.timestamp"] = date_filter
+        end_data = list(collection.find(query, {"_id": 0}).sort(
+            "time_object.timestamp", -1).limit(limit))
+
+    # Handle missing data - make API call
+    if need is not None:
+        from_date = convert_date_format(need[0])
+        to_date = convert_date_format(need[1])
+
+        # Construct API request
+        params = {
+            'name': name,
+            'from_date': from_date,
+            'to_date': to_date
+        }
+
+        # Send the GET request to external API
+        try:
+            response = requests.get(API_BASE_URL, params=params)
+            response.raise_for_status()  # Raise exception for non-200 status codes
+
+            # Try to parse JSON response
+            response_data = response.json()
+
+            # Check the structure of the response
+            if isinstance(response_data, dict) and "events" in response_data:
+                needed_data = response_data["events"]
+            else:
+                needed_data = response_data if isinstance(
+                    response_data, list) else []
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching data from API: {str(e)}")
+            needed_data = []
+        except ValueError as e:  # JSON parsing error
+            print(f"Error parsing API response: {str(e)}")
+            needed_data = []
+
+    # Combine all data
+    finalEvents = start_data + needed_data + end_data
+
+    ###########################################################################################################################
+
+    if not finalEvents:
+        if start_date and end_date:
             return jsonify({"message": f"No news found for {name} in the given date range"}), 404
+        else:
+            return jsonify({"message": f"No news found for {name} in the past week"}), 404
 
-        return jsonify(company_news), 200
-    except Exception as e:
-        error_msg = str(e)
-        status_code = 401 if "API key validation failed" in error_msg else 403
-        return jsonify({"error": error_msg}), status_code
+    company_news = {
+        'data_source': 'news_api_org',
+        'dataset_id': '1',
+        'dataset_type': 'News data',
+        'events': finalEvents
+    }
+    return jsonify(company_news), 200
 
 
 if __name__ == "__main__":

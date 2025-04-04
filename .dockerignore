@@ -1,0 +1,19 @@
+# Ignore virtual environment
+venv/
+
+# Ignore environment files
+.env
+
+# Ignore test scripts and unwanted files
+test_frontend.py
+test_retrieval.py
+insert_data.py
+
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore Git files
+.git
+
