@@ -45,6 +45,7 @@ def auth_api_key(api_key):
 
 # Function to authenticate:
 
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     news = None
