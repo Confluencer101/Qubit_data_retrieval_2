@@ -9,7 +9,7 @@ from time_interval import is_data_available
 
 # Load environment variables
 load_dotenv()
-mongo_uri = os.getenv("JACK_MONGO_URI")  
+mongo_uri = os.getenv("JACK_MONGO_URI")
 
 # Initialize Flask app
 app = Flask(__name__)

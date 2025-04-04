@@ -101,8 +101,7 @@ def is_data_available(intervals, start_date_str, end_date_str):
     if available_intervals[0][0] > start_date:
         gaps.append([
             start_date_str,
-            (available_intervals[0][0] -
-             timedelta(days=1)).strftime("%d-%m-%Y")
+            (available_intervals[0][0] - timedelta(days=1)).strftime("%d-%m-%Y")
         ])
 
     # Check gaps between intervals

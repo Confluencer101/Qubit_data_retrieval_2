@@ -85,7 +85,6 @@ class TestTimeIntervals(unittest.TestCase):
         """Test with adjacent intervals that should be merged."""
         # Create adjacent dates
         jan_11 = "11-01-2025"
-        jan_12 = "12-01-2025"
 
         intervals = [
             [self.jan_01, self.jan_10],
