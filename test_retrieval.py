@@ -14,7 +14,7 @@ def client():
 
 def test_get_company_news(client):
     company_name = "Apple"
-    response = client.get(f"/company/{company_name}")
+    response = client.get(f"/company/{company_name}?api_key=hrppk6zHXrrFYM3CHqx0_Q)")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data['events'], list)
@@ -39,7 +39,7 @@ def test_get_company_news(client):
 
 
 def test_get_company_news_not_found(client):
-    response = client.get("/company/ThisCompanyDoesNotExist")
+    response = client.get("/company/ThisCompanyDoesNotExist?api_key=hrppk6zHXrrFYM3CHqx0_Q")
     assert response.status_code == 404
     data = response.get_json()
     assert data["message"] == "No news found for ThisCompanyDoesNotExist in the past week"
