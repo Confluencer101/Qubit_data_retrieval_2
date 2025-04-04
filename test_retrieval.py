@@ -16,7 +16,7 @@ def client():
 
 
 def test_get_company_news(client):
-    response = client.get("/company/Apple")
+    response = client.get("/company/Apple?api_key=hrppk6zHXrrFYM3CHqx0_Q")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
@@ -30,7 +30,7 @@ def test_get_company_news(client):
 
 
 def test_get_company_news_case_insensitive(client):
-    response = client.get("/company/oPTuS")
+    response = client.get("/company/oPTuS?api_key=hrppk6zHXrrFYM3CHqx0_Q")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
@@ -45,7 +45,7 @@ def test_get_company_news_case_insensitive(client):
 
 def test_get_company_news_range(client):
     response = client.get(
-        "/company/aPPLe/range?start_date=2025-03-07&end_date=2025-03-09")
+        "/company/aPPLe/range?api_key=hrppk6zHXrrFYM3CHqx0_Q&start_date=2025-03-07&end_date=2025-03-09")
     assert response.status_code == 200
     data = response.get_json()
 
@@ -67,7 +67,8 @@ def test_get_company_news_range(client):
 
 
 def test_get_company_news_not_found(client):
-    response = client.get("/company/ThisCompanyDoesNotExist")
+    response = client.get(
+        "/company/ThisCompanyDoesNotExist?api_key=hrppk6zHXrrFYM3CHqx0_Q")
     assert response.status_code == 404
     data = response.get_json()
     assert data["message"] == "No news found for ThisCompanyDoesNotExist"
@@ -77,7 +78,7 @@ def test_get_company_news_not_found(client):
 
 def test_get_company_news_range_not_found(client):
     response = client.get(
-        "/company/Apple/range?start_date=2020-01-01&end_date=2020-01-02")
+        "/company/Apple/range?api_key=hrppk6zHXrrFYM3CHqx0_Q&start_date=2020-01-01&end_date=2020-01-02")
     assert response.status_code == 404
     data = response.get_json()
     assert data["message"] == "No news found for Apple in the given date range"
