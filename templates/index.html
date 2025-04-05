@@ -3,96 +3,320 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Company News</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <style>
-        body { padding: 20px; }
-        .container { max-width: 800px; margin: auto; }
-        .hidden { display: none; }
-        .article-item { margin-bottom: 20px; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; }
-        .article-title { font-size: 1.25rem; margin-bottom: 8px; }
-        .article-meta { color: #6c757d; font-size: 0.9rem; margin-bottom: 10px; }
-        .article-desc { margin-top: 5px; }
-        .loading-spinner { width: 3rem; height: 3rem; }
-    </style>
+    <title>Company News Finder</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body>
-    <div class="container">
-        <h1 class="text-center mb-4">Company News</h1>
-        
-        <form method="post" id="companyForm">
-            <div class="mb-3">
-                <label for="name" class="form-label">Company Name:</label>
-                <input type="text" id="name" name="name" class="form-control" placeholder="e.g., Apple" required>
-            </div>
-            <div class="mb-3">
-                <label for="start_date" class="form-label">Start Date:</label>
-                <input type="date" id="start_date" name="start_date" class="form-control">
-            </div>
-            <div class="mb-3">
-                <label for="end_date" class="form-label">End Date:</label>
-                <input type="date" id="end_date" name="end_date" class="form-control">
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Get News</button>
-        </form>
-        
-        <div id="loading" class="text-center mt-4 hidden">
-            <div class="spinner-border loading-spinner text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2">Fetching news...</p>
-        </div>
-        
-        {% if error %}
-        <div class="alert alert-danger mt-3">{{ error }}</div>
-        {% endif %}
-        
-        {% if news %}
-        <div class="mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="mb-0">News Results</h2>
-                <small class="text-muted">Source: {{ news.data_source }} | Type: {{ news.dataset_type }}</small>
-            </div>
-            
-            {% if news.events|length > 0 %}
-                {% for article in news.events %}
-                <div class="article-item">
-                    <h3 class="article-title">{{ article.attribute.title }}</h3>
-                    <div class="article-meta">
-                        <div>Published: {{ article.time_object.timestamp|truncate(16, True, '') }}</div>
-                        <div>Publisher: {{ article.attribute.publisher }}</div>
-                        {% if article.attribute.author %}
-                        <div>Author: {{ article.attribute.author|truncate(50, True, '...') }}</div>
-                        {% endif %}
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-bold text-blue-800 mb-2">Company News Finder</h1>
+            <p class="text-gray-600">Search for the latest stock news about any company</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <form id="searchForm" class="space-y-4">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <label for="company" class="block text-gray-700 font-medium mb-2">Company Name</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center">
+                                <i class="fas fa-building text-gray-400"></i>
+                            </span>
+                            <input type="text" id="company" name="company" placeholder="Enter company name" 
+                                class="pl-10 w-full py-2 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
                     </div>
-                    <p class="article-desc">{{ article.attribute.description }}</p>
-                    <a href="{{ article.attribute.url }}" target="_blank" class="btn btn-sm btn-outline-primary">Read More</a>
+                    <div class="flex-1">
+                        <label for="apiKey" class="block text-gray-700 font-medium mb-2">
+                            API Key 
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center">
+                                <i class="fas fa-key text-gray-400"></i>
+                            </span>
+                            <input type="password" id="apiKey" name="apiKey" placeholder="Enter your API key or leave blank for demo access" 
+                                class="pl-10 w-full py-2 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div class="flex items-center mt-2">
+                            <input type="checkbox" id="useDefaultKey" class="mr-2" checked>
+                            <label for="useDefaultKey" class="text-sm text-gray-600">Use demo access key</label>
+                        </div>
+                    </div>
                 </div>
-                {% endfor %}
-            {% else %}
-                <div class="alert alert-info">No news articles found for this company.</div>
-            {% endif %}
+
+                <div class="border-t border-gray-200 pt-4">
+                    <div class="flex items-center mb-4">
+                        <input type="checkbox" id="dateRangeToggle" class="mr-2">
+                        <label for="dateRangeToggle" class="text-gray-700 font-medium">Specify Date Range</label>
+                    </div>
+                    
+                    <div id="dateRangeContainer" class="hidden flex flex-col md:flex-row gap-4">
+                        <div class="flex-1">
+                            <label for="startDate" class="block text-gray-700 font-medium mb-2">Start Date</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center">
+                                    <i class="fas fa-calendar text-gray-400"></i>
+                                </span>
+                                <input type="date" id="startDate" name="startDate" 
+                                    class="pl-10 w-full py-2 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <label for="endDate" class="block text-gray-700 font-medium mb-2">End Date</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center">
+                                    <i class="fas fa-calendar text-gray-400"></i>
+                                </span>
+                                <input type="date" id="endDate" name="endDate" 
+                                    class="pl-10 w-full py-2 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center pt-2">
+                    <button type="submit" class="py-2 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition duration-200 flex items-center">
+                        <i class="fas fa-search mr-2"></i>
+                        Search News
+                    </button>
+                </div>
+            </form>
         </div>
-        {% endif %}
+
+        <div id="loadingIndicator" class="hidden">
+            <div class="flex justify-center my-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+            </div>
+            <p class="text-center text-gray-600">Fetching news, please wait...</p>
+        </div>
+
+        <div id="errorContainer" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-8 rounded-md">
+            <p id="errorMessage" class="font-medium"></p>
+        </div>
+
+        <div id="resultsContainer" class="hidden">
+            <header class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    News Results for "<span id="companyNameDisplay"></span>"
+                </h2>
+                <span id="resultCount" class="bg-blue-100 text-blue-800 font-medium px-3 py-1 rounded-full text-sm"></span>
+            </header>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="newsResults">
+                <!-- News cards will be populated here -->
+            </div>
+            
+            <div id="noResults" class="hidden text-center py-8">
+                <i class="fas fa-newspaper text-gray-400 text-5xl mb-4"></i>
+                <p class="text-gray-600 text-lg">No news articles found for this company in the specified time period.</p>
+            </div>
+        </div>
     </div>
-    
+
     <script>
-        // Set default dates (last 7 days)
-        window.addEventListener('load', function() {
-            const today = new Date();
-            const lastWeek = new Date();
-            lastWeek.setDate(today.getDate() - 7);
+        document.addEventListener('DOMContentLoaded', function() {
+            // Constants
+            const DEFAULT_API_KEY = "hrppk6zHXrrFYM3CHqx0_Q";
             
-            document.getElementById('end_date').value = formatDate(today);
-            document.getElementById('start_date').value = formatDate(lastWeek);
+            // API Key handling
+            const apiKeyInput = document.getElementById('apiKey');
+            const useDefaultKeyCheckbox = document.getElementById('useDefaultKey');
             
-            function formatDate(date) {
-                return date.toISOString().slice(0, 10);
+            // Initially disable the API key input if using default key
+            if (useDefaultKeyCheckbox.checked) {
+                apiKeyInput.disabled = true;
+                apiKeyInput.placeholder = "Using demo access key";
             }
-        });
-        
-        document.getElementById("companyForm").addEventListener("submit", function() {
-            document.getElementById("loading").classList.remove("hidden");
+            
+            useDefaultKeyCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    apiKeyInput.disabled = true;
+                    apiKeyInput.value = '';
+                    apiKeyInput.placeholder = "Using demo access key";
+                } else {
+                    apiKeyInput.disabled = false;
+                    apiKeyInput.placeholder = "Enter your API key";
+                    apiKeyInput.focus();
+                }
+            });
+            
+            // Date range toggle functionality
+            const dateRangeToggle = document.getElementById('dateRangeToggle');
+            const dateRangeContainer = document.getElementById('dateRangeContainer');
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            // Set default dates (today and 7 days ago)
+            const today = new Date();
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(today.getDate() - 7);
+            
+            startDateInput.value = formatDate(sevenDaysAgo);
+            endDateInput.value = formatDate(today);
+
+            dateRangeToggle.addEventListener('change', function() {
+                dateRangeContainer.classList.toggle('hidden', !this.checked);
+                startDateInput.required = this.checked;
+                endDateInput.required = this.checked;
+            });
+
+            // Form submission handler
+            const searchForm = document.getElementById('searchForm');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const errorContainer = document.getElementById('errorContainer');
+            const errorMessage = document.getElementById('errorMessage');
+            const companyNameDisplay = document.getElementById('companyNameDisplay');
+            const resultCount = document.getElementById('resultCount');
+            const newsResults = document.getElementById('newsResults');
+            const noResults = document.getElementById('noResults');
+
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get form values
+                const companyName = document.getElementById('company').value.trim();
+                
+                // Determine which API key to use
+                let apiKey;
+                if (useDefaultKeyCheckbox.checked) {
+                    apiKey = DEFAULT_API_KEY;
+                } else {
+                    apiKey = apiKeyInput.value.trim();
+                    if (!apiKey) {
+                        // If user unchecked default but didn't enter a key, fallback to default
+                        apiKey = DEFAULT_API_KEY;
+                    }
+                }
+                
+                const useDateRange = dateRangeToggle.checked;
+                let startDate = useDateRange ? startDateInput.value : null;
+                let endDate = useDateRange ? endDateInput.value : null;
+                
+                // Hide previous results and errors
+                resultsContainer.classList.add('hidden');
+                errorContainer.classList.add('hidden');
+                
+                // Show loading indicator
+                loadingIndicator.classList.remove('hidden');
+                
+                // Build API URL
+                let url = `/company/${encodeURIComponent(companyName)}?api_key=${encodeURIComponent(apiKey)}`;
+                if (useDateRange && startDate && endDate) {
+                    url += `&start_date=${startDate}&end_date=${endDate}`;
+                }
+                
+                // Fetch data from API
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(data => {
+                                throw new Error(data.error || data.message || 'An error occurred while fetching news');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        loadingIndicator.classList.add('hidden');
+                        
+                        // Update company name display
+                        companyNameDisplay.textContent = companyName;
+                        
+                        // Check if we have events
+                        if (data.events && data.events.length > 0) {
+                            // Update result count
+                            resultCount.textContent = `${data.events.length} articles found`;
+                            
+                            // Clear previous results
+                            newsResults.innerHTML = '';
+                            
+                            // Generate news cards
+                            data.events.forEach(news => {
+                                const card = createNewsCard(news);
+                                newsResults.appendChild(card);
+                            });
+                            
+                            // Show results and hide no results message
+                            resultsContainer.classList.remove('hidden');
+                            noResults.classList.add('hidden');
+                            newsResults.classList.remove('hidden');
+                        } else {
+                            // Show no results message
+                            resultsContainer.classList.remove('hidden');
+                            newsResults.classList.add('hidden');
+                            noResults.classList.remove('hidden');
+                            resultCount.textContent = '0 articles found';
+                        }
+                    })
+                    .catch(error => {
+                        loadingIndicator.classList.add('hidden');
+                        errorMessage.textContent = error.message;
+                        errorContainer.classList.remove('hidden');
+                    });
+            });
+
+            // Function to create a news card
+            function createNewsCard(news) {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300';
+                
+                // Get news attributes safely
+                const title = news.attribute?.title || 'Untitled Article';
+                const publisher = news.attribute?.publisher || 'Unknown Publisher';
+                const author = news.attribute?.author ? `by ${news.attribute.author}` : '';
+                const publishedAt = news.time_object?.timestamp ? formatDateTime(new Date(news.time_object.timestamp)) : 'Unknown Date';
+                const description = news.attribute?.description || 'No description available';
+                const url = news.attribute?.url || '#';
+                const eventType = news.event_type || 'News';
+                
+                card.innerHTML = `
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="text-sm font-medium text-gray-500">${publisher}</span>
+                                ${author ? `<span class="text-xs text-gray-500 ml-1">${author}</span>` : ''}
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <span class="text-xs text-gray-400">${publishedAt}</span>
+                                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full mt-1">${eventType}</span>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">${title}</h3>
+                        <p class="text-gray-600 mb-4 line-clamp-3">${description}</p>
+                        <div class="mt-4">
+                            <a href="${url}" target="_blank" class="inline-flex items-center text-blue-600 hover:text-blue-800">
+                                Read full article
+                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                
+                return card;
+            }
+
+            // Helper function to format date as YYYY-MM-DD
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Helper function to format date and time
+            function formatDateTime(date) {
+                const options = { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                };
+                return date.toLocaleDateString('en-US', options);
+            }
         });
     </script>
 </body>
