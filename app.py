@@ -24,7 +24,7 @@ API_BASE_URL = "http://170.64.135.87/newsapi"
 
 
 def convert_date_format(date_str):
-    return parse(date_str).strftime("%Y-%m-%d")
+    return parse(date_str, dayfirst = True).strftime("%Y-%m-%d")
 
 
 def auth_api_key(api_key):
@@ -115,7 +115,7 @@ def get_company_news(name):
     end_dt_str = end_dt.strftime('%d-%m-%Y')
 
     # Get time intervals for the company
-    company_data = interval_collection.find_one({"name": name})
+    company_data = interval_collection.find_one({"name": name.strip().lower()})
     time_intervals = company_data.get(
         "time_intervals", []) if company_data else []
 
