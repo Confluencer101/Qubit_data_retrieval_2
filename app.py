@@ -24,7 +24,7 @@ API_BASE_URL = "http://170.64.135.87/newsapi"
 
 
 def convert_date_format(date_str):
-    return parse(date_str, dayfirst = True).strftime("%Y-%m-%d")
+    return parse(date_str, dayfirst=True).strftime("%Y-%m-%d")
 
 
 def auth_api_key(api_key):
