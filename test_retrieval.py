@@ -44,3 +44,50 @@ def test_get_company_news_not_found(client):
     assert response.status_code == 404
     data = response.get_json()
     assert data["message"] == "No news found for ThisCompanyDoesNotExist in the past week"
+
+def test_company_to_ticker(client):
+    test_cases = [
+        ["apple", "AAPL"],
+        ["google", "GOOG"],
+        ["microsoft", "MSFT"],
+        ["facebook", "META"],
+        ["adobe", "ADBE"],
+        ["amazon", "AMZN"],
+        ["tesla", "TSLA"],
+        ["atlassian", "TEAM"]
+    ]
+
+    for case in test_cases:
+        response = client.get(f"/convert/company_to_ticker?name={case[0]}")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["ticker"] == case[1]
+
+def test_company_to_ticker_no_name(client):
+    response = client.get("/convert/company_to_ticker")
+    assert response.status_code == 400
+    data = response.get_json()
+    assert data["error"] == "Invalid 'name' given"
+
+def test_ticker_to_company(client):
+    test_cases = [
+        ["AAPL", "apple", "Apple Inc."],
+        ["MSFT", "microsoft", "Microsoft Corporation"],
+        ["ADBE", "adobe", "Adobe Inc."],
+        ["AMZN", "amazon", "Amazon.com, Inc."],
+        ["TSLA", "tesla", "Tesla, Inc."],
+        ["TEAM", "atlassian", "Atlassian Corporation"]
+    ]
+
+    for case in test_cases:
+        response = client.get(f"/convert/ticker_to_company?ticker={case[0]}")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["short_name"] == case[1]
+        assert data["full_name"] == case[2]
+
+def test_ticker_to_company_no_ticker(client):
+    response = client.get("/convert/ticker_to_company")
+    assert response.status_code == 400
+    data = response.get_json()
+    assert data["error"] == "Invalid 'ticker' given"
