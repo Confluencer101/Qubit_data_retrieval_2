@@ -230,11 +230,11 @@ def convert_company_to_ticker():
 
     if not name or not re.match(r'^[a-zA-Z\s]+$', name):
         return jsonify({"error": "Invalid 'name' given"}), 400
-    
+
     params = {
         'name': name
     }
-    
+
     try:
         response = requests.get(API_BASE_URL, params=params)
         response.raise_for_status()  # Raise exception for non-200 status codes
@@ -256,7 +256,7 @@ def convert_ticker_to_company():
     params = {
         'ticker': ticker
     }
-    
+
     try:
         response = requests.get(API_BASE_URL, params=params)
         response.raise_for_status()  # Raise exception for non-200 status codes

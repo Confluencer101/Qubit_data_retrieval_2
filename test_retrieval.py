@@ -45,6 +45,7 @@ def test_get_company_news_not_found(client):
     data = response.get_json()
     assert data["message"] == "No news found for ThisCompanyDoesNotExist in the past week"
 
+
 def test_company_to_ticker(client):
     test_cases = [
         ["apple", "AAPL"],
@@ -63,11 +64,13 @@ def test_company_to_ticker(client):
         data = response.get_json()
         assert data["ticker"] == case[1]
 
+
 def test_company_to_ticker_no_name(client):
     response = client.get("/convert/company_to_ticker")
     assert response.status_code == 400
     data = response.get_json()
     assert data["error"] == "Invalid 'name' given"
+
 
 def test_ticker_to_company(client):
     test_cases = [
@@ -85,6 +88,7 @@ def test_ticker_to_company(client):
         data = response.get_json()
         assert data["short_name"] == case[1]
         assert data["full_name"] == case[2]
+
 
 def test_ticker_to_company_no_ticker(client):
     response = client.get("/convert/ticker_to_company")
