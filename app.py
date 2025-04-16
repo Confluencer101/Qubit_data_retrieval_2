@@ -6,6 +6,7 @@ import requests
 import datetime
 from dateutil.parser import parse
 from time_interval import is_data_available
+import re
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +22,8 @@ collection = db["news_api"]
 interval_collection = db["company_index"]
 
 API_BASE_URL = "http://170.64.135.87/newsapi"
+COMPANY_TICKER_URL = "http://170.64.135.87/convert/company_to_ticker"
+TICKER_COMPANY_URL = "http://170.64.135.87/convert/ticker_to_company"
 
 
 def convert_date_format(date_str):
@@ -219,6 +222,50 @@ def get_company_news(name):
         'events': finalEvents
     }
     return jsonify(company_news), 200
+
+
+@app.route('/convert/company_to_ticker')
+def convert_company_to_ticker():
+    name = request.args.get('name')
+
+    if not name or not re.match(r'^[a-zA-Z\s]+$', name):
+        return jsonify({"error": "Invalid 'name' given"}), 400
+
+    params = {
+        'name': name
+    }
+
+    try:
+        response = requests.get(COMPANY_TICKER_URL, params=params)
+        response.raise_for_status()  # Raise exception for non-200 status codes
+        response_data = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data from API: {str(e)}")
+        return jsonify({"error": "Internal Server Error"}), 500
+
+    return jsonify(response_data), 200
+
+
+@app.route('/convert/ticker_to_company')
+def convert_ticker_to_company():
+    ticker = request.args.get('ticker')
+
+    if not ticker:
+        return jsonify({"error": "Invalid 'ticker' given"}), 400
+
+    params = {
+        'ticker': ticker
+    }
+
+    try:
+        response = requests.get(TICKER_COMPANY_URL, params=params)
+        response.raise_for_status()  # Raise exception for non-200 status codes
+        response_data = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data from API: {str(e)}")
+        return jsonify({"error": "Internal Server Error"}), 500
+
+    return jsonify(response_data), 200
 
 
 if __name__ == "__main__":
