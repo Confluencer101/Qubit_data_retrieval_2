@@ -236,7 +236,7 @@ def convert_company_to_ticker():
     }
 
     try:
-        response = requests.get(API_BASE_URL, params=params)
+        response = requests.get(COMPANY_TICKER_URL, params=params)
         response.raise_for_status()  # Raise exception for non-200 status codes
         response_data = response.json()
     except requests.exceptions.RequestException as e:
@@ -258,7 +258,7 @@ def convert_ticker_to_company():
     }
 
     try:
-        response = requests.get(API_BASE_URL, params=params)
+        response = requests.get(TICKER_COMPANY_URL, params=params)
         response.raise_for_status()  # Raise exception for non-200 status codes
         response_data = response.json()
     except requests.exceptions.RequestException as e:
